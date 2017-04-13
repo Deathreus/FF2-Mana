@@ -1,0 +1,9 @@
+*.dropbox
+*.dat
+*.ini
+*.sh
+*.exe
+[Cc]ompiled/
+[Ff]reaks/[Cc]ompiled/
+[Ff]reaks/[Tt]emp.sp
+spcomp
