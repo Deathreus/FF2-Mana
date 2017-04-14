@@ -102,6 +102,7 @@ public void ManaThink(int iClient)
 		return;
 	}
 	
+	if(ManaNextTick[iClient] <= GetEngineTime())
 	{
 		ManaPoolCurrent[iClient] += (ManaPerSecond[iClient] / 5.0);
 		if(ManaPoolCurrent[iClient] > ManaPoolMax[iClient])
