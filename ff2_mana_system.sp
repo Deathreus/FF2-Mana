@@ -9,6 +9,8 @@ public Plugin myinfo = {
 	version 	= "0.1"
 };
 
+#define DEBUG
+
  #undef MAXPLAYERS
 #define MAXPLAYERS 33
 
@@ -72,7 +74,7 @@ public void OnRoundStart(Event hEvent, const char[] sName, bool bDontBroadcast)
 					iSlot++
 					Format(sAbility, 12, "ability%i", iSlot);
 					
-					if(kv.GetNum("mana_slot") != iSlot)
+					if(!kv.GetNum("mana_slot") || kv.GetNum("mana_slot") != iSlot)
 						continue;
 					
 					kv.GetString("name", ManaAbility[iBoss][iSlot], 128);
@@ -119,12 +121,12 @@ public void ManaThink(int iClient)
 	
 	if(ManaNextTick[iClient] <= GetEngineTime())
 	{
-		ManaPoolCurrent[iClient] += (ManaPerSecond[iClient] / 5.0);
-		if(ManaPoolCurrent[iClient] > ManaPoolMax[iClient])
+		ManaPoolCurrent[iClient] += (ManaPerSecond[iClient] / 5.0);	// 5 updates per second
+		if(ManaPoolCurrent[iClient] > ManaPoolMax[iClient]) // clamp
 			ManaPoolCurrent[iClient] = ManaPoolMax[iClient];
 		
 		SetHudTextParams(-1.0, 0.83, 0.15, 255, 255, 255, 255);
-		FF2_ShowSyncHudText(iClient, rageHUD, "Mana: %.0f / %.0f", RoundFloat(ManaPoolCurrent[iClient]), ManaPoolMax[iClient]);
+		ShowSyncHudText(iClient, rageHUD, "Mana: %.0f / %.0f", RoundFloat(ManaPoolCurrent[iClient]), ManaPoolMax[iClient]);
 		
 		FF2_SetBossCharge(FF2_GetBossIndex(iClient), 0, 100.0);
 		
@@ -146,6 +148,10 @@ public Action CastAbility(int iClient, const char[] sCmd, int nArgs)
 		{
 			FF2_DoAbility(iBoss, ManaPlugin[iClient][iSlot], ManaAbility[iClient][iSlot], 0, 0);
 			ManaPoolCurrent[iClient] -= ManaCost[iClient][iSlot];
+			
+			#if defined DEBUG
+			LogMessage("Using ability %s from %s, taking %.0f mana away", ManaAbility[iClient][iSlot], ManaPlugin[iClient][iSlot], ManaCost[iClient][iSlot]);
+			#endif
 		}
 	}
 	
