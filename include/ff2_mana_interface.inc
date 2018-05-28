@@ -52,16 +52,16 @@ forward Action FF2M_OnManaChanged(int iBoss, float flOldValue, float &flNewValue
  * Called after someone presses one of their keys to cast an ability
  *
  * @param iBoss           The client index of the boss
+ * @param iSlot           The slot the ability is in as configured
  * @param pluginName      Plugin we are calling in to
  * @param abilityName     Name of ability to be cast
- * @param iSlot           The slot the ability is in as configured
  * @param flCost          The mana cost of the ability, can be modified
  * @return                Plugin_Changed to modify cost, higher to prevent it from casting
  */
 forward Action FF2M_OnAbilityCast(int iBoss, int iSlot, const char[] pluginName, const char[] abilityName, float &flCost);
 
 public SharedPlugin __pl_FF2_Mana = {
-	name = "Freak Fortress 2: Mana System",
+	name = "FF2 Mana",
 	file = "ff2_mana_system.smx",
 #if defined REQUIRE_PLUGIN
 	required = 1

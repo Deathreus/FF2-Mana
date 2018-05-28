@@ -9,8 +9,6 @@ public Plugin myinfo = {
 	version 	= "0.1"
 };
 
-#define DEBUG
-
  #undef MAXPLAYERS
 #define MAXPLAYERS 33
 
@@ -32,8 +30,12 @@ Handle rageHUD;
 Handle OnManaChanged;
 Handle OnAbilityCast;
 
+ConVar cvarDebug;
+
 public void OnPluginStart()
 {
+	cvarDebug = CreateConVar("ff2_mana_debug", "0", "Turn on debug mode", FCVAR_REPLICATED|FCVAR_DONTRECORD);
+	
 	HookEvent("arena_round_start", OnRoundStart, EventHookMode_PostNoCopy);
 	HookEvent("arena_win_panel", OnRoundEnd, EventHookMode_PostNoCopy);
 	
@@ -214,7 +216,7 @@ public Action CastAbility(int iClient, const char[] sCmd, int nArgs)
 			FF2_DoAbility(iBoss, ManaPlugin[iClient][iSlot], ManaAbility[iClient][iSlot], 0, 0);
 			ManaPoolCurrent[iClient] -= (iResult == Plugin_Changed) ? flNewValue : ManaCost[iClient][iSlot];
 			
-			DebugMessage("Using ability %s from %s, taking %f mana away", ManaAbility[iClient][iSlot], ManaPlugin[iClient][iSlot], ManaCost[iClient][iSlot]);
+			DebugMessage("Using ability '%s' from '%s', taking %.2f mana away", ManaAbility[iClient][iSlot], ManaPlugin[iClient][iSlot], (iResult == Plugin_Changed) ? flNewValue : ManaCost[iClient][iSlot]);
 		}
 	}
 	
@@ -275,14 +277,17 @@ public int Native_SetupAbility(Handle hPlugin, int nParams)
 	strcopy(ManaAbility[iBoss][iSlot], sizeof(ManaAbility[][]), abilityName);
 	ManaCost[iBoss][iSlot] = fManaCost;
 	
+	DebugMessage("Successfully set up a new ability into slot %i; Plugin: '%s' Ability: '%s' Cost: %.2f", iSlot, ManaPlugin[iBoss][iSlot], ManaAbility[iBoss][iSlot], ManaCost[iBoss][iSlot]);
+	
 	return 1;
 }
 
 stock void DebugMessage(const char[] sFormat, any ...)
 {
-#if defined DEBUG
-	char sMessage[256];
-	VFormat(sMessage, sizeof(sMessage), sFormat, 2);
-	LogMessage("%s", sMessage);
-#endif
+	if(cvarDebug.BoolValue)
+	{
+		char sMessage[256];
+		VFormat(sMessage, 255, sFormat, 2);
+		LogMessage("%s", sMessage);
+	}
 }
