@@ -9,8 +9,7 @@ public Plugin myinfo = {
 	version 	= "0.1"
 };
 
- #undef MAXPLAYERS
-#define MAXPLAYERS 33
+#define DEBUG
 
 #define INACTIVE 10000000.0
 
@@ -30,12 +29,8 @@ Handle rageHUD;
 Handle OnManaChanged;
 Handle OnAbilityCast;
 
-ConVar cvarDebug;
-
 public void OnPluginStart()
 {
-	cvarDebug = CreateConVar("ff2_mana_debug", "0", "Turn on debug mode", FCVAR_REPLICATED|FCVAR_DONTRECORD);
-	
 	HookEvent("arena_round_start", OnRoundStart, EventHookMode_PostNoCopy);
 	HookEvent("arena_win_panel", OnRoundEnd, EventHookMode_PostNoCopy);
 	
@@ -45,16 +40,6 @@ public void OnPluginStart()
 	
 	OnManaChanged = CreateGlobalForward("FF2M_OnManaChanged", ET_Hook, Param_Cell, Param_Float, Param_FloatByRef); // iBoss, oldValue, newValue
 	OnAbilityCast = CreateGlobalForward("FF2M_OnAbilityCast", ET_Hook, Param_Cell, Param_Cell, Param_String, Param_String, Param_FloatByRef); // iBoss, iSlot, pluginName, abilityName, cost
-	
-	char sCmd[6];
-	for(int iSlot = 1; iSlot <= 9; iSlot++)
-	{
-		Format(sCmd, 5, "slot%i", iSlot);
-		if(AddCommandListener(CastAbility, sCmd))
-		{
-			DebugMessage("Hooked command %s", sCmd);
-		}
-	}
 	
 	rageHUD = CreateHudSynchronizer();
 }
@@ -67,7 +52,7 @@ public void OnClientDisconnect(int iClient)
 	ManaPoolCurrent[iClient] = 0.0;
 	ManaNextTick[iClient] = INACTIVE;
 	
-	for(new iSlot = 1; iSlot <= 9; iSlot++)
+	for(int iSlot = 1; iSlot <= 9; iSlot++)
 	{
 		ManaCost[iClient][iSlot] = 0.0;
 		ManaAbility[iClient][iSlot][0] = '\0';
@@ -165,9 +150,9 @@ public void ManaThink(int iClient)
 		Call_PushCell(iClient);
 		Call_PushFloat(ManaPoolCurrent[iClient]);
 		float flNewValue = ManaPoolCurrent[iClient] + (ManaPerSecond[iClient] / 5.0);	// 5 updates per second
-		Call_PushFloatRef(&flNewValue);
-		int iResult = 0;
-		Call_Finish(&iResult);
+		Call_PushFloatRef(flNewValue);
+		Action iResult = Plugin_Continue;
+		Call_Finish(iResult);
 		
 		if(iResult == Plugin_Changed)
 			ManaPoolCurrent[iClient] = flNewValue;
@@ -206,12 +191,12 @@ public Action CastAbility(int iClient, const char[] sCmd, int nArgs)
 			Call_PushString(ManaPlugin[iClient][iSlot]);
 			Call_PushString(ManaAbility[iClient][iSlot]);
 			float flNewValue = ManaCost[iClient][iSlot];
-			Call_PushFloatRef(&flNewValue);
-			int iResult = 0;
-			Call_Finish(&iResult);
+			Call_PushFloatRef(flNewValue);
+			Action iResult = Plugin_Continue;
+			Call_Finish(iResult);
 			
 			if(iResult > Plugin_Changed)
-				return;
+				return Plugin_Continue;
 			
 			FF2_DoAbility(iBoss, ManaPlugin[iClient][iSlot], ManaAbility[iClient][iSlot], 0, 0);
 			ManaPoolCurrent[iClient] -= (iResult == Plugin_Changed) ? flNewValue : ManaCost[iClient][iSlot];
@@ -229,7 +214,7 @@ public int Native_AddMana(Handle hPlugin, int nParams)
 	if(iBoss > MaxClients || iBoss < 1)
 		return ThrowNativeError(SP_ERROR_NATIVE, "Invalid client (%d).", iBoss);
 	
-	float fMana = GetNativeFloat(2);
+	float fMana = GetNativeCell(2);
 	ManaPoolCurrent[iBoss] += fMana;
 	
 	return 1;
@@ -241,7 +226,7 @@ public int Native_SetMana(Handle hPlugin, int nParams)
 	if(iBoss > MaxClients || iBoss < 1)
 		return ThrowNativeError(SP_ERROR_NATIVE, "Invalid client (%d).", iBoss);
 	
-	float fMana = GetNativeFloat(2);
+	float fMana = GetNativeCell(2);
 	ManaPoolCurrent[iBoss] = fMana;
 	
 	return 1;
@@ -254,18 +239,21 @@ public int Native_SetupAbility(Handle hPlugin, int nParams)
 		return ThrowNativeError(SP_ERROR_NATIVE, "Invalid client (%d).", iBoss);
 	
 	int iSlot = GetNativeCell(2);
-	if(1Slot <= 0 || iSlot >= 10)
+	if(iSlot <= 0 || iSlot >= 10)
 		return ThrowNativeError(SP_ERROR_NATIVE, "Invalid slot for ability (%d).", iSlot);
+
+	if(ManaAbility[iBoss][iSlot][0] != '\0')
+		return ThrowNativeError(SP_ERROR_NATIVE, "Slot %d already has an ability.", iSlot);
 	
 	int i3;
-	GetNativeStringLength(3, &i3);
+	GetNativeStringLength(3, i3);
 	char[] pluginName = new char[i3+1];
 	GetNativeString(3, pluginName, i3);
 	if(!pluginName[0])
 		return ThrowNativeError(SP_ERROR_NATIVE, "Empty string found for plugin name, you must supply it!");
 	
 	int i4;
-	GetNativeStringLength(4, &i4);
+	GetNativeStringLength(4, i4);
 	char[] abilityName = new char[i4+1];
 	GetNativeString(4, abilityName, i4);
 	if(!abilityName[0])
@@ -284,10 +272,9 @@ public int Native_SetupAbility(Handle hPlugin, int nParams)
 
 stock void DebugMessage(const char[] sFormat, any ...)
 {
-	if(cvarDebug.BoolValue)
-	{
-		char sMessage[256];
-		VFormat(sMessage, 255, sFormat, 2);
-		LogMessage("%s", sMessage);
-	}
+#if defined DEBUG
+	char sMessage[256];
+	VFormat(sMessage, 255, sFormat, 2);
+	LogMessage("%s", sMessage);
+#endif
 }
